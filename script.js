@@ -358,7 +358,7 @@ function renderRecipe() {
   setText("#preview-difficulty", recipe.difficulty || "-");
   setText("#preview-notes", recipe.notes || t.fallbackNotes);
 
-  renderList("#preview-ingredients", recipe.ingredients, false, [t.fallbackIngredients]);
+  renderIngredientsList(recipe.ingredients, [t.fallbackIngredients]);
   renderList("#preview-instructions", recipe.instructions, true, [t.fallbackInstructions]);
 
   if (recipe.image && visibility.showCoverImage) {
@@ -419,6 +419,45 @@ function renderList(selector, items, numbered, fallbackItems) {
     }
     list.appendChild(listItem);
   });
+}
+
+function renderIngredientsList(items, fallbackItems) {
+  previewIngredients.innerHTML = "";
+  const content = items.length ? sortIngredients(items) : fallbackItems;
+
+  content.forEach((item) => {
+    const listItem = listItemTemplate.content.firstElementChild.cloneNode(true);
+    const ingredient = parseIngredient(item);
+
+    if (ingredient.isHighlighted) {
+      const strong = document.createElement("strong");
+      strong.textContent = ingredient.text;
+      listItem.appendChild(strong);
+    } else {
+      listItem.textContent = ingredient.text;
+    }
+
+    previewIngredients.appendChild(listItem);
+  });
+}
+
+function sortIngredients(items) {
+  return items
+    .map((item, index) => ({ item, index, isHighlighted: hasIngredientPriorityMarker(item) }))
+    .sort((left, right) => Number(right.isHighlighted) - Number(left.isHighlighted) || left.index - right.index)
+    .map(({ item }) => item);
+}
+
+function parseIngredient(value) {
+  const text = normalizeText(value).replace(/\s*!$/, "");
+  return {
+    text,
+    isHighlighted: hasIngredientPriorityMarker(value)
+  };
+}
+
+function hasIngredientPriorityMarker(value) {
+  return /\s*!$/.test(normalizeText(value));
 }
 
 function syncImageStatus() {

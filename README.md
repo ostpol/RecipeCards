@@ -31,6 +31,26 @@ Recipe Cards is a lightweight static web app for creating consistent, double-sid
 
 No installation is required.
 
+## Ingredient Prioritization
+
+You can prioritize ingredients by adding a trailing `!` to the end of an ingredient line.
+
+Example:
+
+```text
+250 g pasta
+1 lemon!
+200 g ricotta
+Parmesan!
+```
+
+Behavior:
+
+- ingredients with a trailing `!` are shown first in the printed/previewed ingredients list
+- prioritized ingredients are rendered in bold
+- the trailing `!` is treated as a marker and is not shown in the preview
+- the marker stays in the editor and exported JSON so the priority is preserved
+
 ## Printing Notes
 
 For the intended card size and duplex alignment:
@@ -84,6 +104,7 @@ Recipes are stored as JSON objects with this general structure:
 Notes:
 
 - `ingredients` and `instructions` are arrays of strings
+- a trailing `!` on an ingredient marks it as prioritized for sorting and bold display
 - `image` is a data URL when an image has been embedded
 - missing fields are normalized to sensible defaults during import
 - older JSON files without a `visibility` object can still be imported
