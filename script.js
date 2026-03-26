@@ -226,6 +226,7 @@ const metaServings = document.querySelector("#meta-servings");
 const metaDifficulty = document.querySelector("#meta-difficulty");
 const backColumns = document.querySelector("#back-columns");
 const ingredientsBlock = document.querySelector("#ingredients-block");
+const previewIngredients = document.querySelector("#preview-ingredients");
 const instructionsBlock = document.querySelector("#instructions-block");
 const notesBlock = document.querySelector("#notes-block");
 const listItemTemplate = document.querySelector("#list-item-template");
@@ -396,6 +397,7 @@ function renderRecipe() {
   backColumns.hidden = visibleColumnCount === 0;
   backColumns.classList.toggle("single-column", visibleColumnCount === 1);
 
+  syncIngredientColumns();
   syncImageStatus();
 }
 
@@ -422,6 +424,20 @@ function renderList(selector, items, numbered, fallbackItems) {
 function syncImageStatus() {
   const t = translations[currentLanguage];
   imageStatus.textContent = recipe.image ? t.imageStatusEmbedded : t.imageStatusEmpty;
+}
+
+function syncIngredientColumns() {
+  previewIngredients.classList.remove("content-list-two-column");
+
+  if (ingredientsBlock.hidden || backColumns.hidden || recipe.ingredients.length < 2) {
+    return;
+  }
+
+  const overflowsSingleColumn = ingredientsBlock.scrollHeight > ingredientsBlock.clientHeight + 1;
+
+  if (overflowsSingleColumn) {
+    previewIngredients.classList.add("content-list-two-column");
+  }
 }
 
 function updateStorageStatus(state) {

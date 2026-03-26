@@ -527,8 +527,18 @@ body.debug-print .card-frame::after {
   line-height: 1.34;
 }
 
+.content-list-two-column {
+  column-count: 2;
+  column-gap: 4mm;
+  padding-left: 3.5mm;
+}
+
 .content-list li + li {
   margin-top: 1.1mm;
+}
+
+.content-list-two-column li {
+  break-inside: avoid;
 }
 
 .content-list-numbered {
