@@ -12,6 +12,10 @@ const translations = {
     exportButton: "Export JSON",
     importButton: "Import JSON",
     outputTitle: "Print and export",
+    storageStatusReady: "",
+    storageStatusRecovered: "Saving works again.",
+    storageErrorQuota: "Could not save this recipe in the browser. The embedded image is probably too large. Try a smaller image or remove it, then export JSON to keep the recipe.",
+    storageErrorGeneric: "Could not save this recipe in the browser. Your latest changes are still shown, but they may be lost after a refresh.",
     duplexHint: "Tip: choose duplex printing with <strong>flip on short edge</strong> for correct front/back alignment.",
     debugBorder: "Print debug border",
     printSettingsTitle: "Print Settings",
@@ -84,6 +88,10 @@ const translations = {
     exportButton: "JSON exportieren",
     importButton: "JSON importieren",
     outputTitle: "Drucken und exportieren",
+    storageStatusReady: "",
+    storageStatusRecovered: "Speichern funktioniert wieder.",
+    storageErrorQuota: "Dieses Rezept konnte nicht im Browser gespeichert werden. Das eingebettete Bild ist wahrscheinlich zu gro\u00df. Verwende ein kleineres Bild oder entferne es und exportiere das Rezept anschlie\u00dfend als JSON.",
+    storageErrorGeneric: "Dieses Rezept konnte nicht im Browser gespeichert werden. Die letzten \u00c4nderungen werden noch angezeigt, gehen nach einem Neuladen aber m\u00f6glicherweise verloren.",
     duplexHint: "Tipp: für den beidseitigen Druck <strong>an kurzer Kante wenden</strong> wählen, damit Vorder- und Rückseite richtig ausgerichtet sind.",
     debugBorder: "Druckrahmen zur Fehlersuche",
     printSettingsTitle: "Druckeinstellungen",
@@ -205,6 +213,7 @@ const languageButtons = Array.from(document.querySelectorAll("[data-language]"))
 const removeImageButton = document.querySelector("#remove-image-button");
 const visibilityInputs = Array.from(document.querySelectorAll("[data-visibility-key]"));
 const imageStatus = document.querySelector("#image-status");
+const storageStatus = document.querySelector("#storage-status");
 const previewImage = document.querySelector("#preview-image");
 const imageFallback = document.querySelector("#image-fallback");
 const frontOverlay = document.querySelector("#front-overlay");
@@ -223,6 +232,7 @@ const listItemTemplate = document.querySelector("#list-item-template");
 
 let recipe = loadRecipe();
 let currentLanguage = loadLanguage();
+let storageState = "ready";
 
 function loadLanguage() {
   const stored = localStorage.getItem(LANGUAGE_KEY);
@@ -324,7 +334,15 @@ function updateRecipe() {
 }
 
 function persistRecipe() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(recipe, null, 2));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(recipe, null, 2));
+    updateStorageStatus("ready");
+    return true;
+  } catch (error) {
+    console.error("Could not save recipe.", error);
+    updateStorageStatus(isQuotaExceededError(error) ? "quota-error" : "generic-error");
+    return false;
+  }
 }
 
 function renderRecipe() {
@@ -406,6 +424,38 @@ function syncImageStatus() {
   imageStatus.textContent = recipe.image ? t.imageStatusEmbedded : t.imageStatusEmpty;
 }
 
+function updateStorageStatus(state) {
+  const t = translations[currentLanguage];
+  const wasError = storageState !== "ready";
+  storageState = state;
+  storageStatus.classList.remove("is-error", "is-success");
+
+  if (state === "ready") {
+    storageStatus.textContent = wasError ? t.storageStatusRecovered : t.storageStatusReady;
+    if (wasError) {
+      storageStatus.classList.add("is-success");
+    }
+    return;
+  }
+
+  if (state === "quota-error") {
+    storageStatus.textContent = t.storageErrorQuota;
+  } else {
+    storageStatus.textContent = t.storageErrorGeneric;
+  }
+
+  storageStatus.classList.add("is-error");
+}
+
+function isQuotaExceededError(error) {
+  return error instanceof DOMException && (
+    error.name === "QuotaExceededError" ||
+    error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    error.code === 22 ||
+    error.code === 1014
+  );
+}
+
 function syncDebugPrint() {
   document.body.classList.toggle("debug-print", Boolean(debugPrintInput?.checked));
 }
@@ -430,6 +480,7 @@ function applyTranslations() {
     button.classList.toggle("is-active", button.dataset.language === currentLanguage);
   });
 
+  updateStorageStatus(storageState);
   renderRecipe();
 }
 
@@ -467,8 +518,14 @@ async function handleImageUpload(file) {
     return;
   }
 
+  const previousImage = recipe.image;
   recipe.image = await readFileAsDataUrl(file);
-  persistRecipe();
+
+  if (!persistRecipe()) {
+    recipe.image = previousImage;
+    imageUploadInput.value = "";
+  }
+
   renderRecipe();
 }
 

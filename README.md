@@ -1,16 +1,111 @@
 # Recipe Cards
 
-Static HTML/CSS/JavaScript app for creating consistent, double-sided DIN A6 landscape recipe cards.
+> [!WARNING]
+> This is built with AI. Be careful.
 
-## Features
+Recipe Cards is a lightweight static web app for creating consistent, double-sided DIN A6 landscape recipe cards. It runs entirely in the browser with plain HTML, CSS, and JavaScript, so you can open it locally, edit a recipe, preview both sides, and print without a build step or server.
 
-- Fixed-layout front and back card preview
-- Print styling locked to `A6 landscape`
-- JSON import/export with embedded image data
-- Works locally without a server
+## What It Does
 
-## Usage
+- Edits recipe content in a simple form-based sidebar
+- Shows a live preview of the front and back of the card
+- Prints in a fixed `A6 landscape` layout
+- Imports and exports recipes as JSON
+- Stores the current recipe and selected language in `localStorage`
+- Embeds uploaded cover images directly into exported JSON
 
-Open `index.html` in a browser, edit the recipe, and use **Print card** or **Export JSON**.
+## Project Structure
 
-You can also import [`sample-recipe.json`](./sample-recipe.json) to see the expected data format.
+- `index.html` contains the editor UI and card preview markup
+- `styles.css` contains the app styling, responsive layout, and print rules
+- `script.js` handles state, rendering, import/export, image upload, and translations
+- `sample-recipe.json` is an example import file
+
+## Getting Started
+
+1. Clone or download this repository.
+2. Open `index.html` in a modern browser.
+3. Edit the fields in the left panel.
+4. Use `Print card` to open the browser print dialog.
+5. Use `Export JSON` to save the recipe for later.
+
+No installation is required.
+
+## Printing Notes
+
+For the intended card size and duplex alignment:
+
+- Set paper size to `A6`
+- Set orientation to `Landscape`
+- Keep scale at `100%` or `Default`
+- Turn off browser headers and footers
+- For double-sided printing, use duplex with `flip on short edge`
+
+If the printed result looks too large, the printer or browser is usually still set to `A4` or `Letter`.
+
+## Import and Export Format
+
+Recipes are stored as JSON objects with this general structure:
+
+```json
+{
+  "title": "Tomato Galette",
+  "subtitle": "Buttery pastry with mustard, herbs, and summer tomatoes",
+  "prepTime": "25 min",
+  "cookTime": "35 min",
+  "servings": "4",
+  "difficulty": "Medium",
+  "ingredients": [
+    "1 sheet puff pastry",
+    "3 tbsp Dijon mustard"
+  ],
+  "instructions": [
+    "Roll the pastry onto a lined tray.",
+    "Spread mustard over the center, leaving a border."
+  ],
+  "notes": "Let it cool before slicing.",
+  "image": "",
+  "visibility": {
+    "showCoverImage": true,
+    "showSubtitle": true,
+    "showBackHeader": true,
+    "showMetaStrip": true,
+    "showPrepTime": true,
+    "showCookTime": true,
+    "showServings": true,
+    "showDifficulty": true,
+    "showIngredients": true,
+    "showInstructions": true,
+    "showNotes": true
+  }
+}
+```
+
+Notes:
+
+- `ingredients` and `instructions` are arrays of strings
+- `image` is a data URL when an image has been embedded
+- missing fields are normalized to sensible defaults during import
+- older JSON files without a `visibility` object can still be imported
+
+See [`sample-recipe.json`](./sample-recipe.json) for a working example.
+
+## Browser Storage
+
+The app saves the current recipe in the browser using `localStorage`, which means:
+
+- your latest recipe is preserved between refreshes on the same browser
+- data is local to the browser and device you used
+- very large embedded images may exceed browser storage limits
+
+For long-term storage or sharing, export the recipe as JSON.
+
+## Development
+
+This is a dependency-free static project. To make changes:
+
+1. Edit `index.html`, `styles.css`, or `script.js`
+2. Reload the page in the browser
+3. Test both on-screen preview and print output
+
+Because print layout is a core feature, any layout changes should be checked in the browser print preview as well as on screen.
