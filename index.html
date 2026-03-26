@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe Cards</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="editor-panel">
+      <div class="top-bar top-bar-compact">
+        <div class="language-switcher" aria-label="Language switcher">
+          <button id="language-en" class="language-flag" type="button" data-language="en" aria-label="English">🇬🇧</button>
+          <button id="language-de" class="language-flag" type="button" data-language="de" aria-label="Deutsch">🇩🇪</button>
+        </div>
+      </div>
+
+      <form id="recipe-form" class="editor-form">
+        <section class="form-card">
+          <h2 data-i18n="frontSide">Front side</h2>
+          <label>
+            <span data-i18n="titleLabel">Title</span>
+            <input id="title" name="title" type="text" maxlength="80" placeholder="Lemon Ricotta Pasta" data-i18n-placeholder="titlePlaceholder">
+          </label>
+          <label>
+            <span data-i18n="subtitleLabel">Subtitle</span>
+            <input id="subtitle" name="subtitle" type="text" maxlength="120" placeholder="Bright, creamy, and ready in 20 minutes" data-i18n-placeholder="subtitlePlaceholder">
+          </label>
+          <label>
+            <span data-i18n="coverImageLabel">Cover image</span>
+            <input id="image-upload" name="image-upload" type="file" accept="image/*">
+          </label>
+          <div class="image-actions">
+            <button id="remove-image-button" class="ghost-button" type="button" data-i18n="removeImage">Remove image</button>
+            <span id="image-status" data-i18n="imageStatusEmpty">No image selected</span>
+          </div>
+        </section>
+
+        <section class="form-card">
+          <h2 data-i18n="backSide">Back side</h2>
+          <div class="meta-grid">
+            <label>
+              <span data-i18n="prepTimeLabel">Prep time</span>
+              <input id="prepTime" name="prepTime" type="text" maxlength="30" placeholder="15 min" data-i18n-placeholder="prepTimePlaceholder">
+            </label>
+            <label>
+              <span data-i18n="cookTimeLabel">Cook time</span>
+              <input id="cookTime" name="cookTime" type="text" maxlength="30" placeholder="10 min" data-i18n-placeholder="cookTimePlaceholder">
+            </label>
+            <label>
+              <span data-i18n="servingsLabel">Servings</span>
+              <input id="servings" name="servings" type="text" maxlength="30" placeholder="2" data-i18n-placeholder="servingsPlaceholder">
+            </label>
+            <label>
+              <span data-i18n="difficultyLabel">Difficulty</span>
+              <input id="difficulty" name="difficulty" type="text" maxlength="30" placeholder="Easy" data-i18n-placeholder="difficultyPlaceholder">
+            </label>
+          </div>
+          <label>
+            <span data-i18n="ingredientsLabel">Ingredients</span>
+            <textarea id="ingredients" name="ingredients" rows="7" placeholder="250 g pasta&#10;200 g ricotta&#10;1 lemon&#10;Parmesan" data-i18n-placeholder="ingredientsPlaceholder"></textarea>
+          </label>
+          <label>
+            <span data-i18n="instructionsLabel">Instructions</span>
+            <textarea id="instructions" name="instructions" rows="8" placeholder="Cook pasta until al dente.&#10;Mix ricotta with lemon zest and juice.&#10;Toss with pasta and a splash of pasta water." data-i18n-placeholder="instructionsPlaceholder"></textarea>
+          </label>
+          <label>
+            <span data-i18n="notesLabel">Notes</span>
+            <textarea id="notes" name="notes" rows="4" placeholder="Add spinach at the end for extra color." data-i18n-placeholder="notesPlaceholder"></textarea>
+          </label>
+        </section>
+
+        <section class="form-card">
+          <h2 data-i18n="layoutTitle">Card layout</h2>
+          <div class="toggle-grid">
+            <label class="toggle-row" for="showCoverImage">
+              <input id="showCoverImage" name="showCoverImage" type="checkbox" data-visibility-key="showCoverImage">
+              <span data-i18n="showCoverImage">Show cover image</span>
+            </label>
+            <label class="toggle-row" for="showSubtitle">
+              <input id="showSubtitle" name="showSubtitle" type="checkbox" data-visibility-key="showSubtitle">
+              <span data-i18n="showSubtitle">Show subtitle</span>
+            </label>
+            <label class="toggle-row" for="showBackHeader">
+              <input id="showBackHeader" name="showBackHeader" type="checkbox" data-visibility-key="showBackHeader">
+              <span data-i18n="showBackHeader">Show back title</span>
+            </label>
+            <label class="toggle-row" for="showMetaStrip">
+              <input id="showMetaStrip" name="showMetaStrip" type="checkbox" data-visibility-key="showMetaStrip">
+              <span data-i18n="showMetaStrip">Show recipe info strip</span>
+            </label>
+            <label class="toggle-row" for="showPrepTime">
+              <input id="showPrepTime" name="showPrepTime" type="checkbox" data-visibility-key="showPrepTime">
+              <span data-i18n="showPrepTime">Show prep time</span>
+            </label>
+            <label class="toggle-row" for="showCookTime">
+              <input id="showCookTime" name="showCookTime" type="checkbox" data-visibility-key="showCookTime">
+              <span data-i18n="showCookTime">Show cook time</span>
+            </label>
+            <label class="toggle-row" for="showServings">
+              <input id="showServings" name="showServings" type="checkbox" data-visibility-key="showServings">
+              <span data-i18n="showServings">Show servings</span>
+            </label>
+            <label class="toggle-row" for="showDifficulty">
+              <input id="showDifficulty" name="showDifficulty" type="checkbox" data-visibility-key="showDifficulty">
+              <span data-i18n="showDifficulty">Show difficulty</span>
+            </label>
+            <label class="toggle-row" for="showIngredients">
+              <input id="showIngredients" name="showIngredients" type="checkbox" data-visibility-key="showIngredients">
+              <span data-i18n="showIngredients">Show ingredients</span>
+            </label>
+            <label class="toggle-row" for="showInstructions">
+              <input id="showInstructions" name="showInstructions" type="checkbox" data-visibility-key="showInstructions">
+              <span data-i18n="showInstructions">Show instructions</span>
+            </label>
+            <label class="toggle-row" for="showNotes">
+              <input id="showNotes" name="showNotes" type="checkbox" data-visibility-key="showNotes">
+              <span data-i18n="showNotes">Show notes</span>
+            </label>
+          </div>
+        </section>
+      </form>
+
+      <section class="actions-card">
+        <h2 data-i18n="outputTitle">Print and export</h2>
+        <div class="button-row">
+          <button id="print-button" class="primary-button" type="button" data-i18n="printButton">Print card</button>
+          <button id="new-button" class="secondary-button" type="button" data-i18n="newButton">New recipe</button>
+        </div>
+        <div class="button-row">
+          <button id="export-button" class="secondary-button" type="button" data-i18n="exportButton">Export JSON</button>
+          <label class="file-button">
+            <input id="import-input" type="file" accept=".json,application/json">
+            <span data-i18n="importButton">Import JSON</span>
+          </label>
+        </div>
+        <p class="print-hint" data-i18n-html="duplexHint">
+          Tip: choose duplex printing with <strong>flip on short edge</strong> for correct front/back alignment.
+        </p>
+        <!--
+        <label class="toggle-row" for="debug-print">
+          <input id="debug-print" type="checkbox">
+          <span data-i18n="debugBorder">Print debug border</span>
+        </label>
+        -->
+        <details class="print-details">
+          <summary data-i18n="printSettingsSummary">Show print settings</summary>
+          <ol class="print-steps">
+            <li data-i18n-html="printStep1">Open the browser print dialog with <strong>Print card</strong>.</li>
+            <li data-i18n-html="printStep2">Set <strong>Paper size</strong> to <strong>A6</strong>.</li>
+            <li data-i18n-html="printStep3">Set <strong>Orientation</strong> to <strong>Landscape</strong>.</li>
+            <li data-i18n-html="printStep4">Set <strong>Scale</strong> to <strong>100%</strong> or <strong>Default</strong>, not "Fit to page".</li>
+            <li data-i18n-html="printStep5">Set <strong>Margins</strong> to <strong>None</strong> or <strong>Default</strong>.</li>
+            <li data-i18n-html="printStep6">Turn <strong>Headers and footers</strong> off.</li>
+            <li data-i18n-html="printStep7">For double-sided printing, use <strong>Duplex</strong> with <strong>flip on short edge</strong>.</li>
+          </ol>
+          <p class="print-hint" data-i18n="printHint">
+            If the print is too large, the paper size is usually still set to A4 or Letter in the print dialog or printer driver.
+          </p>
+        </details>
+      </section>
+    </aside>
+
+    <main class="preview-panel">
+      <div class="preview-stack">
+        <article class="recipe-card recipe-card-front print-page">
+          <div class="card-frame">
+            <div class="front-image-wrap">
+              <img id="preview-image" alt="Recipe preview">
+              <div id="image-fallback" class="image-fallback"></div>
+            </div>
+            <div id="front-overlay" class="front-overlay"></div>
+            <div class="front-content">
+              <h3 id="preview-title">Lemon Ricotta Pasta</h3>
+              <p id="preview-subtitle" class="front-subtitle">Bright, creamy, and ready in 20 minutes</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="recipe-card recipe-card-back print-page">
+          <div class="card-frame back-frame">
+            <header id="back-header" class="back-header">
+              <h3 id="back-title">Lemon Ricotta Pasta</h3>
+            </header>
+
+            <section id="meta-strip" class="meta-strip">
+              <div id="meta-prep" class="meta-item">
+                <span class="meta-label" data-i18n="metaPrep">Prep</span>
+                <strong id="preview-prepTime">15 min</strong>
+              </div>
+              <div id="meta-cook" class="meta-item">
+                <span class="meta-label" data-i18n="metaCook">Cook</span>
+                <strong id="preview-cookTime">10 min</strong>
+              </div>
+              <div id="meta-servings" class="meta-item">
+                <span class="meta-label" data-i18n="metaServes">Serves</span>
+                <strong id="preview-servings">2</strong>
+              </div>
+              <div id="meta-difficulty" class="meta-item">
+                <span class="meta-label" data-i18n="metaLevel">Level</span>
+                <strong id="preview-difficulty">Easy</strong>
+              </div>
+            </section>
+
+            <div id="back-columns" class="back-columns">
+              <section id="ingredients-block" class="content-block">
+                <h4 data-i18n="ingredientsLabel">Ingredients</h4>
+                <ul id="preview-ingredients" class="content-list"></ul>
+              </section>
+
+              <section id="instructions-block" class="content-block">
+                <h4 data-i18n="instructionsLabel">Instructions</h4>
+                <ol id="preview-instructions" class="content-list content-list-numbered"></ol>
+              </section>
+            </div>
+
+            <section id="notes-block" class="notes-block">
+              <h4 data-i18n="notesLabel">Notes</h4>
+              <p id="preview-notes">Add spinach at the end for extra color.</p>
+            </section>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+
+  <template id="list-item-template">
+    <li></li>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
