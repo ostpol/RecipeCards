@@ -423,26 +423,44 @@ function renderList(selector, items, numbered, fallbackItems) {
 
 function renderIngredientsList(items, fallbackItems) {
   previewIngredients.innerHTML = "";
-  const content = items.length ? sortIngredients(items) : fallbackItems;
-  let hasSeenUnprioritizedIngredient = false;
+  const sections = buildIngredientSections(items);
 
-  content.forEach((item) => {
+  if (!sections.length) {
+    renderFallbackIngredients(fallbackItems);
+    return;
+  }
+
+  sections.forEach((section) => {
+    if (section.title) {
+      const headingItem = listItemTemplate.content.firstElementChild.cloneNode(true);
+      headingItem.classList.add("ingredient-category");
+      headingItem.textContent = section.title;
+      previewIngredients.appendChild(headingItem);
+    }
+
+    const sortedItems = sortIngredients(section.items);
+
+    sortedItems.forEach((item) => {
+      const listItem = listItemTemplate.content.firstElementChild.cloneNode(true);
+      const ingredient = parseIngredient(item);
+
+      if (ingredient.isHighlighted) {
+        const strong = document.createElement("strong");
+        strong.textContent = ingredient.text;
+        listItem.appendChild(strong);
+      } else {
+        listItem.textContent = ingredient.text;
+      }
+
+      previewIngredients.appendChild(listItem);
+    });
+  });
+}
+
+function renderFallbackIngredients(fallbackItems) {
+  fallbackItems.forEach((item) => {
     const listItem = listItemTemplate.content.firstElementChild.cloneNode(true);
-    const ingredient = parseIngredient(item);
-
-    if (!ingredient.isHighlighted && !hasSeenUnprioritizedIngredient && items.length) {
-      listItem.classList.add("ingredient-priority-break");
-      hasSeenUnprioritizedIngredient = true;
-    }
-
-    if (ingredient.isHighlighted) {
-      const strong = document.createElement("strong");
-      strong.textContent = ingredient.text;
-      listItem.appendChild(strong);
-    } else {
-      listItem.textContent = ingredient.text;
-    }
-
+    listItem.textContent = item;
     previewIngredients.appendChild(listItem);
   });
 }
@@ -462,6 +480,63 @@ function parseIngredient(value) {
   };
 }
 
+function buildIngredientSections(items) {
+  if (!items.length) {
+    return [];
+  }
+
+  const hasCategories = items.some((item) => isIngredientCategory(item));
+
+  if (!hasCategories) {
+    return [{
+      title: "",
+      items: items.filter((item) => parseIngredient(item).text)
+    }];
+  }
+
+  const sections = [];
+  let currentSection = null;
+
+  items.forEach((item) => {
+    if (isIngredientCategory(item)) {
+      const title = parseIngredientCategory(item);
+      if (!title) {
+        return;
+      }
+
+      currentSection = { title, items: [] };
+      sections.push(currentSection);
+      return;
+    }
+
+    const ingredient = parseIngredient(item);
+    if (!ingredient.text) {
+      return;
+    }
+
+    if (!currentSection) {
+      currentSection = { title: "", items: [] };
+      sections.push(currentSection);
+    }
+
+    currentSection.items.push(item);
+  });
+
+  return sections.filter((section) => section.items.length);
+}
+
+function parseIngredientCategory(value) {
+  return normalizeText(value)
+    .replace(/^#\s*/, "")
+    .replace(/\s*#$/, "")
+    .trim();
+}
+
+function isIngredientCategory(value) {
+  const text = normalizeText(value);
+  return /^#\s*\S/.test(text) || /\S\s*#$/.test(text);
+}
+
 function hasIngredientPriorityMarker(value) {
   return /\s*!$/.test(normalizeText(value));
 }
@@ -474,7 +549,10 @@ function syncImageStatus() {
 function syncIngredientColumns() {
   previewIngredients.classList.remove("content-list-two-column");
 
-  if (ingredientsBlock.hidden || backColumns.hidden || recipe.ingredients.length < 2) {
+  const ingredientCount = buildIngredientSections(recipe.ingredients)
+    .reduce((count, section) => count + section.items.length, 0);
+
+  if (ingredientsBlock.hidden || backColumns.hidden || ingredientCount < 2) {
     return;
   }
 

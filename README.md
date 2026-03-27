@@ -106,6 +106,31 @@ Behavior:
 - the trailing `!` is treated as a marker and is not shown in the preview
 - the marker stays in the editor and exported JSON so the priority is preserved
 
+## Ingredient Categories
+
+You can create ingredient categories by adding a category line that starts with `#`.
+
+Example:
+
+```text
+# Dough
+Flour
+Water
+Salt!
+
+# Filling
+Spinach
+Ricotta!
+Nutmeg
+```
+
+Behavior:
+
+- every ingredient after a `# Category` line belongs to that category until the next category line
+- categories are shown as headings in the printed/previewed ingredients list
+- prioritized ingredients are still sorted first, but only inside their own category
+- uncategorized ingredients before the first category are still supported
+
 ## Printing Notes
 
 For the intended card size and duplex alignment:

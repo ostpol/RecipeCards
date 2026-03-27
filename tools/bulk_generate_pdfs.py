@@ -171,39 +171,33 @@ def load_app_assets(repo_root: Path) -> tuple[str, str, str]:
 
 
 def build_inline_app_html(index_html: str, styles_css: str, script_js: str, recipe_payload: str, language: str) -> str:
-    bootstrap_script = f"""
-<script>
-(() => {{
-  const storage = new Map();
-  const fallbackStorage = {{
-    getItem(key) {{
-      return storage.has(key) ? storage.get(key) : null;
-    }},
-    setItem(key, value) {{
-      storage.set(String(key), String(value));
-    }},
-    removeItem(key) {{
-      storage.delete(String(key));
-    }},
-    clear() {{
-      storage.clear();
-    }}
-  }};
-
-  try {{
-    window.localStorage.setItem('__recipe_cards_probe__', '1');
-    window.localStorage.removeItem('__recipe_cards_probe__');
-  }} catch (error) {{
-    Object.defineProperty(window, 'localStorage', {{
-      configurable: true,
-      value: fallbackStorage
-    }});
+    script_prelude = f"""
+const __recipeCardStorageMap = new Map();
+const __recipeCardLocalStorage = {{
+  getItem(key) {{
+    return __recipeCardStorageMap.has(key) ? __recipeCardStorageMap.get(key) : null;
+  }},
+  setItem(key, value) {{
+    __recipeCardStorageMap.set(String(key), String(value));
+  }},
+  removeItem(key) {{
+    __recipeCardStorageMap.delete(String(key));
+  }},
+  clear() {{
+    __recipeCardStorageMap.clear();
   }}
-
-  window.localStorage.setItem({json.dumps(STORAGE_KEY)}, {json.dumps(recipe_payload)});
-  window.localStorage.setItem({json.dumps(LANGUAGE_KEY)}, {json.dumps(language)});
-}})();
-</script>
+}};
+__recipeCardLocalStorage.setItem({json.dumps(STORAGE_KEY)}, {json.dumps(recipe_payload)});
+__recipeCardLocalStorage.setItem({json.dumps(LANGUAGE_KEY)}, {json.dumps(language)});
+const localStorage = __recipeCardLocalStorage;
+try {{
+  Object.defineProperty(window, 'localStorage', {{
+    configurable: true,
+    value: __recipeCardLocalStorage
+  }});
+}} catch (error) {{
+  // The inline script uses the lexical localStorage binding above, so this is optional.
+}}
 """.strip()
 
     html = index_html.replace(
@@ -213,7 +207,7 @@ def build_inline_app_html(index_html: str, styles_css: str, script_js: str, reci
     )
     html = html.replace(
         '<script src="script.js"></script>',
-        f"{bootstrap_script}\n<script>\n{script_js}\n</script>",
+        f"<script>\n{script_prelude}\n{script_js}\n</script>",
         1,
     )
     return html
@@ -282,13 +276,13 @@ async def render_all(
 
         browser = await playwright.chromium.launch(**launch_kwargs)
         try:
-            page = await browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=1)
             for job in jobs:
                 if job.output_path.exists() and not overwrite:
                     if verbose:
                         print(f"skip  {job.output_path}")
                     continue
 
+                page = await browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=1)
                 try:
                     await render_job(page, job, language, timeout_ms, index_html, styles_css, script_js)
                 except PlaywrightTimeoutError:
@@ -300,6 +294,8 @@ async def render_all(
                 else:
                     if verbose:
                         print(f"wrote {job.output_path}")
+                finally:
+                    await page.close()
         finally:
             await browser.close()
 
