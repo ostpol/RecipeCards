@@ -23,3 +23,6 @@ playwright-browsers/
 # Common local browser/cache locations sometimes created in-project
 .cache/
 .local/
+
+# Generated PDFs
+/pdf/

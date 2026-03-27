@@ -424,10 +424,16 @@ function renderList(selector, items, numbered, fallbackItems) {
 function renderIngredientsList(items, fallbackItems) {
   previewIngredients.innerHTML = "";
   const content = items.length ? sortIngredients(items) : fallbackItems;
+  let hasSeenUnprioritizedIngredient = false;
 
   content.forEach((item) => {
     const listItem = listItemTemplate.content.firstElementChild.cloneNode(true);
     const ingredient = parseIngredient(item);
+
+    if (!ingredient.isHighlighted && !hasSeenUnprioritizedIngredient && items.length) {
+      listItem.classList.add("ingredient-priority-break");
+      hasSeenUnprioritizedIngredient = true;
+    }
 
     if (ingredient.isHighlighted) {
       const strong = document.createElement("strong");

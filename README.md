@@ -13,12 +13,14 @@ Recipe Cards is a lightweight static web app for creating consistent, double-sid
 - Imports and exports recipes as JSON
 - Stores the current recipe and selected language in `localStorage`
 - Embeds uploaded cover images directly into exported JSON
+- Supports standalone bulk PDF generation from exported JSON files
 
 ## Project Structure
 
 - `index.html` contains the editor UI and card preview markup
 - `styles.css` contains the app styling, responsive layout, and print rules
 - `script.js` handles state, rendering, import/export, image upload, and translations
+- `tools/bulk_generate_pdfs.py` batch-renders exported JSON files into A6 PDFs using the existing browser layout
 - `sample-recipe.json` is an example import file
 
 ## Getting Started
@@ -29,7 +31,60 @@ Recipe Cards is a lightweight static web app for creating consistent, double-sid
 4. Use `Print card` to open the browser print dialog.
 5. Use `Export JSON` to save the recipe for later.
 
-No installation is required.
+No installation is required for the editor.
+
+## Bulk PDF Generation
+
+The repository includes a standalone Python renderer at `tools/bulk_generate_pdfs.py`.
+
+Why this approach:
+
+- it does not add bulk-export code to the browser app itself
+- it reuses the existing `index.html`, `styles.css`, and `script.js`
+- it prints through Chromium, so the PDF matches the same DOM and print CSS used by the editor
+
+### Install Once
+
+```bash
+pip install playwright
+python -m playwright install chromium
+```
+
+If Chromium is already installed elsewhere, you can also pass `--browser-executable /path/to/chrome`.
+
+### Render One Recipe
+
+```bash
+python3 tools/bulk_generate_pdfs.py sample-recipe.json --verbose
+```
+
+This writes `pdf/sample-recipe.pdf` next to the input file.
+
+### Render a Whole Folder
+
+```bash
+python3 tools/bulk_generate_pdfs.py exports --recursive --verbose
+```
+
+By default, PDFs are written to `exports/pdf/` and keep the same relative folder structure as the JSON input files.
+
+### Useful Flags
+
+- `--language en|de` forces the rendered UI language
+- `--output-dir /path/to/output` changes where PDFs are written
+- `--overwrite` replaces existing PDFs
+- `--glob '*.json'` narrows which files are picked up
+
+### Image Handling
+
+The preferred workflow is still to export JSON from the editor, because embedded cover images are already stored as data URLs inside the JSON.
+
+As a convenience, if a JSON file has no `image` value, the batch renderer will also look for a sibling image file with the same base name, for example:
+
+- `my-recipe.json`
+- `my-recipe.jpg`
+
+Supported sidecar formats are `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, and `.bmp`.
 
 ## Ingredient Prioritization
 

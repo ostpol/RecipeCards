@@ -537,6 +537,10 @@ body.debug-print .card-frame::after {
   margin-top: 1.1mm;
 }
 
+.content-list li.ingredient-priority-break {
+  margin-top: 3.2mm;
+}
+
 .content-list-two-column li {
   break-inside: avoid;
 }
