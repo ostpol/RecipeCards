@@ -1,0 +1,25 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Virtualenv created inside tools/
+tools/bin/
+tools/include/
+tools/lib/
+tools/lib64
+tools/share/
+tools/pyvenv.cfg
+
+# Playwright browser downloads and caches
+ms-playwright/
+.playwright/
+playwright-browsers/
+
+# Common local browser/cache locations sometimes created in-project
+.cache/
+.local/
