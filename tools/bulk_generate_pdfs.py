@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Batch-render exported recipe JSON files to A6 landscape PDFs.
+"""Batch-render exported recipe JSON files to printable PDFs.
 
 The script reuses the existing Recipe Cards web app renderer by inlining the
 repository's HTML, CSS, and JavaScript into a temporary page, seeding
@@ -24,20 +24,26 @@ STORAGE_KEY = "recipe-card-current"
 LANGUAGE_KEY = "recipe-card-language"
 PDF_PAGE_WIDTH = "148mm"
 PDF_PAGE_HEIGHT = "105mm"
+A5_SHEET_WIDTH = "148mm"
+A5_SHEET_HEIGHT = "210mm"
 SUPPORTED_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".bmp")
 
 
 @dataclass(frozen=True)
-class RecipeJob:
-    input_path: Path
+class RenderJob:
+    input_paths: tuple[Path, ...]
     output_path: Path
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate one A6 PDF per exported recipe JSON using the existing Recipe Cards layout."
+        description="Generate printable PDFs from exported recipe JSON using the existing Recipe Cards layout."
     )
-    parser.add_argument("input", help="A recipe JSON file or a directory containing recipe JSON files.")
+    parser.add_argument(
+        "input",
+        nargs="+",
+        help="One input path for A6 mode, or one to two exported recipe JSON files for a5-2up mode.",
+    )
     parser.add_argument(
         "-o",
         "--output-dir",
@@ -48,6 +54,12 @@ def parse_args() -> argparse.Namespace:
         default="en",
         choices=("en", "de"),
         help="Language to force inside the renderer. Defaults to en.",
+    )
+    parser.add_argument(
+        "--sheet-layout",
+        default="a6",
+        choices=("a6", "a5-2up"),
+        help="PDF layout: single A6 landscape card per page or two cards per A5 portrait sheet. Defaults to a6.",
     )
     parser.add_argument(
         "--browser-executable",
@@ -102,7 +114,20 @@ def validate_repo_root(repo_root: Path) -> None:
         raise SystemExit(f"Repository root is missing required app files: {', '.join(missing)}")
 
 
-def collect_jobs(input_path: Path, output_dir: Path | None, glob_pattern: str, recursive: bool) -> list[RecipeJob]:
+def collect_jobs(
+    input_paths: list[Path],
+    output_dir: Path | None,
+    glob_pattern: str,
+    recursive: bool,
+    sheet_layout: str,
+) -> list[RenderJob]:
+    if sheet_layout == "a5-2up":
+        return collect_a5_sheet_jobs(input_paths, output_dir)
+
+    if len(input_paths) != 1:
+        raise SystemExit("A6 mode expects exactly one input path.")
+
+    input_path = input_paths[0]
     if input_path.is_file():
         json_paths = [input_path]
         base_input_dir = input_path.parent
@@ -118,7 +143,7 @@ def collect_jobs(input_path: Path, output_dir: Path | None, glob_pattern: str, r
         raise SystemExit(f"No JSON files found in {input_path}")
 
     target_dir = output_dir or (base_input_dir / "pdf")
-    jobs: list[RecipeJob] = []
+    jobs: list[RenderJob] = []
 
     for json_path in json_paths:
         if input_path.is_dir():
@@ -126,9 +151,27 @@ def collect_jobs(input_path: Path, output_dir: Path | None, glob_pattern: str, r
             pdf_path = (target_dir / relative).with_suffix(".pdf")
         else:
             pdf_path = (target_dir / json_path.stem).with_suffix(".pdf")
-        jobs.append(RecipeJob(input_path=json_path, output_path=pdf_path))
+        jobs.append(RenderJob(input_paths=(json_path,), output_path=pdf_path))
 
     return jobs
+
+
+def collect_a5_sheet_jobs(input_paths: list[Path], output_dir: Path | None) -> list[RenderJob]:
+    if not 1 <= len(input_paths) <= 2:
+        raise SystemExit("A5 2-up mode expects one or two JSON files.")
+
+    resolved_inputs = [path.resolve() for path in input_paths]
+    for path in resolved_inputs:
+        if not path.exists():
+            raise SystemExit(f"Input path does not exist: {path}")
+        if not path.is_file() or path.suffix.lower() != ".json":
+            raise SystemExit("A5 2-up mode only supports explicit JSON files, not directories.")
+
+    base_dir = resolved_inputs[0].parent
+    target_dir = output_dir or (base_dir / "pdf")
+    stem = "__".join(path.stem for path in resolved_inputs)
+    pdf_path = (target_dir / stem).with_suffix(".pdf")
+    return [RenderJob(input_paths=tuple(resolved_inputs), output_path=pdf_path)]
 
 
 def infer_sidecar_image(recipe: object, json_path: Path) -> object:
@@ -213,6 +256,120 @@ try {{
     return html
 
 
+def sanitize_card_markup(card_html: str) -> str:
+    return card_html.replace(" print-page", "").replace("print-page ", "").replace("print-page", "")
+
+
+def build_a5_sheet_html(styles_css: str, front_cards: list[str], back_cards: list[str]) -> str:
+    def build_slots(cards: list[str]) -> str:
+        slots: list[str] = []
+        for index in range(2):
+            inner = sanitize_card_markup(cards[index]) if index < len(cards) else ""
+            slots.append(f'<div class="sheet-card-slot">{inner}</div>')
+        return "\n".join(slots)
+
+    front_slots = build_slots(front_cards)
+    back_slots = build_slots(back_cards)
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe Cards A5 Sheet</title>
+  <style>
+{styles_css}
+
+html,
+body {{
+  margin: 0;
+  background: #ffffff;
+}}
+
+body {{
+  width: 148mm;
+}}
+
+.preview-stack {{
+  display: grid;
+  gap: 0;
+  justify-content: start;
+  padding: 0;
+}}
+
+.print-sheet {{
+  position: relative;
+  width: 148mm;
+  height: 210mm;
+  display: grid;
+  grid-template-rows: repeat(2, 105mm);
+  background: #ffffff;
+  overflow: hidden;
+}}
+
+.sheet-card-slot {{
+  width: 148mm;
+  height: 105mm;
+  overflow: hidden;
+}}
+
+.sheet-card-slot:empty {{
+  background: #ffffff;
+}}
+
+.sheet-card-slot > .recipe-card {{
+  width: 148mm;
+  height: 105mm;
+  border-radius: 0;
+  box-shadow: none;
+}}
+
+.sheet-divider {{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(105mm - 0.2mm);
+  height: 0.4mm;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 30;
+}}
+
+@media print {{
+  @page {{
+    size: A5 portrait;
+    margin: 0;
+  }}
+
+  .print-sheet {{
+    width: 148mm;
+    height: 210mm;
+    break-after: page;
+    page-break-after: always;
+  }}
+
+  .print-sheet:last-child {{
+    break-after: auto;
+    page-break-after: auto;
+  }}
+}}
+  </style>
+</head>
+<body>
+  <div class="preview-stack">
+    <section class="print-sheet print-sheet-front">
+      <div class="sheet-divider"></div>
+{front_slots}
+    </section>
+    <section class="print-sheet print-sheet-back">
+{back_slots}
+    </section>
+  </div>
+</body>
+</html>
+"""
+
+
 async def wait_for_recipe_ready(page: object, timeout_ms: int) -> None:
     await page.wait_for_selector(".recipe-card-front", timeout=timeout_ms)
     await page.wait_for_function(
@@ -230,38 +387,97 @@ async def wait_for_recipe_ready(page: object, timeout_ms: int) -> None:
     )
 
 
-async def render_job(
-    page: object,
-    job: RecipeJob,
+async def render_recipe_cards(
+    browser: object,
+    recipe_path: Path,
     language: str,
     timeout_ms: int,
     index_html: str,
     styles_css: str,
     script_js: str,
-) -> None:
-    recipe_payload = load_recipe_json(job.input_path)
+) -> tuple[str, str]:
+    recipe_payload = load_recipe_json(recipe_path)
     html = build_inline_app_html(index_html, styles_css, script_js, recipe_payload, language)
 
-    await page.set_content(html, wait_until="load", timeout=timeout_ms)
-    await wait_for_recipe_ready(page, timeout_ms)
+    page = await browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=1)
+    try:
+        await page.set_content(html, wait_until="load", timeout=timeout_ms)
+        await wait_for_recipe_ready(page, timeout_ms)
+        return await page.evaluate(
+            """
+            () => {
+              const front = document.querySelector(".recipe-card-front");
+              const back = document.querySelector(".recipe-card-back");
+
+              if (!front || !back) {
+                throw new Error("Could not find rendered recipe cards.");
+              }
+
+              return [front.outerHTML, back.outerHTML];
+            }
+            """
+        )
+    finally:
+        await page.close()
+
+
+async def render_job(
+    browser: object,
+    page: object,
+    job: RenderJob,
+    language: str,
+    timeout_ms: int,
+    index_html: str,
+    styles_css: str,
+    script_js: str,
+    sheet_layout: str,
+) -> None:
+    if sheet_layout == "a6":
+        recipe_payload = load_recipe_json(job.input_paths[0])
+        html = build_inline_app_html(index_html, styles_css, script_js, recipe_payload, language)
+        await page.set_content(html, wait_until="load", timeout=timeout_ms)
+        await wait_for_recipe_ready(page, timeout_ms)
+    else:
+        front_cards: list[str] = []
+        back_cards: list[str] = []
+
+        for recipe_path in job.input_paths:
+            front_html, back_html = await render_recipe_cards(
+                browser=browser,
+                recipe_path=recipe_path,
+                language=language,
+                timeout_ms=timeout_ms,
+                index_html=index_html,
+                styles_css=styles_css,
+                script_js=script_js,
+            )
+            front_cards.append(front_html)
+            back_cards.append(back_html)
+
+        html = build_a5_sheet_html(styles_css, front_cards, back_cards)
+        await page.set_content(html, wait_until="load", timeout=timeout_ms)
+
     await page.emulate_media(media="print")
 
     job.output_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_width = PDF_PAGE_WIDTH if sheet_layout == "a6" else A5_SHEET_WIDTH
+    pdf_height = PDF_PAGE_HEIGHT if sheet_layout == "a6" else A5_SHEET_HEIGHT
     await page.pdf(
         path=str(job.output_path),
         print_background=True,
-        width=PDF_PAGE_WIDTH,
-        height=PDF_PAGE_HEIGHT,
+        width=pdf_width,
+        height=pdf_height,
         margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"},
     )
 
 
 async def render_all(
-    jobs: list[RecipeJob],
+    jobs: list[RenderJob],
     repo_root: Path,
     language: str,
     timeout_ms: int,
     browser_executable: str | None,
+    sheet_layout: str,
     overwrite: bool,
     verbose: bool,
 ) -> int:
@@ -284,13 +500,13 @@ async def render_all(
 
                 page = await browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=1)
                 try:
-                    await render_job(page, job, language, timeout_ms, index_html, styles_css, script_js)
+                    await render_job(browser, page, job, language, timeout_ms, index_html, styles_css, script_js, sheet_layout)
                 except PlaywrightTimeoutError:
                     failures += 1
-                    print(f"error Timed out while rendering {job.input_path}", file=sys.stderr)
+                    print(f"error Timed out while rendering {', '.join(str(path) for path in job.input_paths)}", file=sys.stderr)
                 except Exception as exc:
                     failures += 1
-                    print(f"error Failed to render {job.input_path}: {exc}", file=sys.stderr)
+                    print(f"error Failed to render {', '.join(str(path) for path in job.input_paths)}: {exc}", file=sys.stderr)
                 else:
                     if verbose:
                         print(f"wrote {job.output_path}")
@@ -307,9 +523,9 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     validate_repo_root(repo_root)
 
-    input_path = Path(args.input).expanduser().resolve()
+    input_paths = [Path(raw_input).expanduser().resolve() for raw_input in args.input]
     output_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else None
-    jobs = collect_jobs(input_path, output_dir, args.glob, args.recursive)
+    jobs = collect_jobs(input_paths, output_dir, args.glob, args.recursive, args.sheet_layout)
 
     failures = asyncio.run(
         render_all(
@@ -318,6 +534,7 @@ def main() -> int:
             language=args.language,
             timeout_ms=max(1, int(args.timeout_seconds * 1000)),
             browser_executable=args.browser_executable,
+            sheet_layout=args.sheet_layout,
             overwrite=args.overwrite,
             verbose=args.verbose,
         )

@@ -3,112 +3,80 @@
 > [!WARNING]
 > This is built with AI. Be careful.
 
-Recipe Cards is a lightweight static web app for creating consistent, double-sided DIN A6 landscape recipe cards. It runs entirely in the browser with plain HTML, CSS, and JavaScript, so you can open it locally, edit a recipe, preview both sides, and print without a build step or server.
+Recipe Cards is a small static web app for creating printable recipe cards in `DIN A6 landscape`.
 
-## What It Does
+The project has two parts:
 
-- Edits recipe content in a simple form-based sidebar
-- Shows a live preview of the front and back of the card
-- Prints in a fixed `A6 landscape` layout
-- Imports and exports recipes as JSON
-- Stores the current recipe and selected language in `localStorage`
-- Embeds uploaded cover images directly into exported JSON
-- Supports standalone bulk PDF generation from exported JSON files
+- the browser editor for creating and printing individual cards
+- a standalone Python script for generating PDFs from exported recipe JSON files
 
-## Project Structure
+The editor runs locally in the browser. There is no build step, no framework, and no server.
 
-- `index.html` contains the editor UI and card preview markup
-- `styles.css` contains the app styling, responsive layout, and print rules
-- `script.js` handles state, rendering, import/export, image upload, and translations
-- `tools/bulk_generate_pdfs.py` batch-renders exported JSON files into A6 PDFs using the existing browser layout
-- `sample-recipe.json` is an example import file
+## What This Repo Is For
 
-## Getting Started
+Use this repo when you want to:
 
-1. Clone or download this repository.
-2. Open `index.html` in a modern browser.
-3. Edit the fields in the left panel.
-4. Use `Print card` to open the browser print dialog.
-5. Use `Export JSON` to save the recipe for later.
+- write or update a recipe in a fixed card layout
+- preview front and back before printing
+- store recipes as JSON files
+- print a single card directly from the browser
+- generate PDFs in bulk from exported JSON files
 
-No installation is required for the editor.
+## Quick Start
 
-## Bulk PDF Generation
+1. Open `index.html` in a modern browser.
+2. Edit the recipe fields in the left panel.
+3. Optionally upload a cover image.
+4. Use `Export JSON` to save the recipe.
+5. Use `Print card` if you want to print directly from the browser.
 
-The repository includes a standalone Python renderer at `tools/bulk_generate_pdfs.py`.
+That is the whole basic workflow.
 
-Why this approach:
+## How The Editor Works
 
-- it does not add bulk-export code to the browser app itself
-- it reuses the existing `index.html`, `styles.css`, and `script.js`
-- it prints through Chromium, so the PDF matches the same DOM and print CSS used by the editor
+The editor is a live preview tool:
 
-### Install Once
+- the left side is the form
+- the right side is the printable preview
+- changes are saved in the browser automatically
+- the current recipe and selected language are stored in `localStorage`
 
-```bash
-pip install playwright
-python -m playwright install chromium
-```
+Supported editor features:
 
-If Chromium is already installed elsewhere, you can also pass `--browser-executable /path/to/chrome`.
+- English and German UI
+- optional cover image
+- JSON import and export
+- per-section visibility toggles
+- front and back preview
+- print styling for `A6 landscape`
 
-### Render One Recipe
+## Recipe Writing Conventions
 
-```bash
-python3 tools/bulk_generate_pdfs.py sample-recipe.json --verbose
-```
+The ingredients field supports two small formatting conventions.
 
-This writes `pdf/sample-recipe.pdf` next to the input file.
+### Prioritized Ingredients
 
-### Render a Whole Folder
-
-```bash
-python3 tools/bulk_generate_pdfs.py exports --recursive --verbose
-```
-
-By default, PDFs are written to `exports/pdf/` and keep the same relative folder structure as the JSON input files.
-
-### Useful Flags
-
-- `--language en|de` forces the rendered UI language
-- `--output-dir /path/to/output` changes where PDFs are written
-- `--overwrite` replaces existing PDFs
-- `--glob '*.json'` narrows which files are picked up
-
-### Image Handling
-
-The preferred workflow is still to export JSON from the editor, because embedded cover images are already stored as data URLs inside the JSON.
-
-As a convenience, if a JSON file has no `image` value, the batch renderer will also look for a sibling image file with the same base name, for example:
-
-- `my-recipe.json`
-- `my-recipe.jpg`
-
-Supported sidecar formats are `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, and `.bmp`.
-
-## Ingredient Prioritization
-
-You can prioritize ingredients by adding a trailing `!` to the end of an ingredient line.
+Add a trailing `!` to mark an ingredient as important.
 
 Example:
 
 ```text
-250 g pasta
-1 lemon!
-200 g ricotta
-Parmesan!
+Butter!
+Flour
+Eggs!
+Milk
 ```
 
-Behavior:
+What happens:
 
-- ingredients with a trailing `!` are shown first in the printed/previewed ingredients list
-- prioritized ingredients are rendered in bold
-- the trailing `!` is treated as a marker and is not shown in the preview
-- the marker stays in the editor and exported JSON so the priority is preserved
+- prioritized ingredients are shown first
+- prioritized ingredients are printed in bold
+- the trailing `!` is not shown in the preview
+- the marker stays in the editor and exported JSON
 
-## Ingredient Categories
+### Ingredient Categories
 
-You can create ingredient categories by adding a category line that starts with `#`.
+Add a line starting with `#` to begin a category.
 
 Example:
 
@@ -124,89 +92,169 @@ Ricotta!
 Nutmeg
 ```
 
-Behavior:
+What happens:
 
-- every ingredient after a `# Category` line belongs to that category until the next category line
-- categories are shown as headings in the printed/previewed ingredients list
-- prioritized ingredients are still sorted first, but only inside their own category
-- uncategorized ingredients before the first category are still supported
+- category lines become headings in the preview
+- ingredients stay grouped under their category
+- prioritization still works, but only inside each category
+- uncategorized ingredients before the first category are still allowed
 
-## Printing Notes
+## Printing
 
-For the intended card size and duplex alignment:
+The browser editor is designed for `A6 landscape`.
 
-- Set paper size to `A6`
-- Set orientation to `Landscape`
-- Keep scale at `100%` or `Default`
-- Turn off browser headers and footers
-- For double-sided printing, use duplex with `flip on short edge`
+Recommended print settings:
 
-If the printed result looks too large, the printer or browser is usually still set to `A4` or `Letter`.
+- paper size: `A6`
+- orientation: `Landscape`
+- scale: `100%` or `Default`
+- headers and footers: off
+- margins: `None` or `Default`
 
-## Import and Export Format
+For duplex printing:
 
-Recipes are stored as JSON objects with this general structure:
+- use `flip on short edge`
 
-```json
-{
-  "title": "Tomato Galette",
-  "subtitle": "Buttery pastry with mustard, herbs, and summer tomatoes",
-  "prepTime": "25 min",
-  "cookTime": "35 min",
-  "servings": "4",
-  "difficulty": "Medium",
-  "ingredients": [
-    "1 sheet puff pastry",
-    "3 tbsp Dijon mustard"
-  ],
-  "instructions": [
-    "Roll the pastry onto a lined tray.",
-    "Spread mustard over the center, leaving a border."
-  ],
-  "notes": "Let it cool before slicing.",
-  "image": "",
-  "visibility": {
-    "showCoverImage": true,
-    "showSubtitle": true,
-    "showBackHeader": true,
-    "showMetaStrip": true,
-    "showPrepTime": true,
-    "showCookTime": true,
-    "showServings": true,
-    "showDifficulty": true,
-    "showIngredients": true,
-    "showInstructions": true,
-    "showNotes": true
-  }
-}
+Important practical note:
+
+Many printers do not support automatic duplex printing on `A6`. In practice, manual turning is often necessary.
+
+If the output looks too large, the printer or browser is usually still set to `A4` or `Letter`.
+
+## JSON Workflow
+
+The editor exports recipes as JSON.
+
+This is the recommended long-term workflow:
+
+1. Create or edit the recipe in the browser.
+2. Export it as JSON.
+3. Keep the JSON file as the canonical saved version.
+4. Re-import it later when you want to continue editing.
+
+Why this matters:
+
+- browser storage is local to one browser profile
+- embedded images can make browser storage too large
+- exported JSON is portable, versionable, and easier to back up
+
+## Bulk PDF Generation
+
+The repository includes `tools/bulk_generate_pdfs.py`.
+
+This script exists so PDF generation can reuse the exact same HTML, CSS, and JavaScript as the browser editor.
+
+### Install Once
+
+```bash
+pip install playwright
+python -m playwright install chromium
 ```
 
-Notes:
+If Chromium is already installed elsewhere, you can also pass:
 
-- `ingredients` and `instructions` are arrays of strings
-- a trailing `!` on an ingredient marks it as prioritized for sorting and bold display
-- `image` is a data URL when an image has been embedded
-- missing fields are normalized to sensible defaults during import
-- older JSON files without a `visibility` object can still be imported
+```bash
+--browser-executable /path/to/chrome
+```
 
-See [`sample-recipe.json`](./sample-recipe.json) for a working example.
+### A6 PDFs
 
-## Browser Storage
+Render one recipe:
 
-The app saves the current recipe in the browser using `localStorage`, which means:
+```bash
+python3 tools/bulk_generate_pdfs.py sample-recipe.json --verbose
+```
 
-- your latest recipe is preserved between refreshes on the same browser
-- data is local to the browser and device you used
-- very large embedded images may exceed browser storage limits
+Render a whole folder:
 
-For long-term storage or sharing, export the recipe as JSON.
+```bash
+python3 tools/bulk_generate_pdfs.py exports --recursive --verbose
+```
 
-## Development
+By default, PDFs are written to a `pdf/` folder next to the input location.
 
-This is a dependency-free static project. To make changes:
+### A5 Workaround For Manual Turning
 
-1. Edit `index.html`, `styles.css`, or `script.js`
-2. Reload the page in the browser
-3. Test both on-screen preview and print output
+If your printer cannot duplex `A6`, use:
 
-Because print layout is a core feature, any layout changes should be checked in the browser print preview as well as on screen.
+```bash
+python3 tools/bulk_generate_pdfs.py sample-recipe.json --sheet-layout a5-2up --verbose
+```
+
+In `a5-2up` mode:
+
+- the script accepts one or two explicit JSON files
+- one JSON places one card on the top half of the A5 sheet
+- two JSON files place two cards on the sheet, stacked vertically
+- page 1 contains the front sides
+- page 2 contains the matching back sides
+- the front page includes a light gray guide line in the exact middle
+
+Two-card example:
+
+```bash
+python3 tools/bulk_generate_pdfs.py recipe-one.json recipe-two.json --sheet-layout a5-2up --verbose
+```
+
+Directory input is only supported in the default `a6` mode.
+
+### Sidecar Images
+
+If a JSON file does not contain an embedded `image`, the PDF generator also looks for an image file with the same base name.
+
+Example:
+
+- `my-recipe.json`
+- `my-recipe.jpg`
+
+Supported sidecar formats:
+
+- `.png`
+- `.jpg`
+- `.jpeg`
+- `.webp`
+- `.gif`
+- `.svg`
+- `.bmp`
+
+## Files In This Repo
+
+- `index.html`
+  The app structure and preview markup.
+- `styles.css`
+  Screen layout, print layout, and card styling.
+- `script.js`
+  Editor state, rendering, import/export, language switching, ingredient logic, and browser storage handling.
+- `tools/bulk_generate_pdfs.py`
+  Playwright-based PDF generator that renders exported JSON through the same app layout.
+- `sample-recipe.json`
+  Small example import file.
+
+## If You Come Back Later
+
+If you open this repo again in a few months and want to remember how to work with it, use this checklist:
+
+1. Open `index.html` for normal editing.
+2. Export recipes as JSON when you want to keep them.
+3. Use browser print for single cards.
+4. Use `tools/bulk_generate_pdfs.py` for batch PDFs.
+5. Use `--sheet-layout a5-2up` when A6 duplex printing is impractical.
+6. Treat the exported JSON files as the real saved data, not browser storage.
+
+## Development Notes
+
+This project is intentionally simple.
+
+- no build step
+- no package manager
+- no frontend framework
+- no backend
+
+When changing the app:
+
+1. edit `index.html`, `styles.css`, `script.js`, or `tools/bulk_generate_pdfs.py`
+2. reload the browser
+3. test both screen preview and print preview
+4. if you changed PDF generation, also test the Python script
+
+Because printing is the core feature, visual checks matter more than usual. Always verify both layout and paper assumptions after changing card dimensions, spacing, or print rules.
